@@ -7,7 +7,7 @@ module ThumbsUp
 
     module ClassMethods
       def acts_as_voteable
-        has_many :votes, :as => :voteable, :dependent => :nullify
+        has_many :votes, :as => :voteable, :dependent => :destroy
 
         include ThumbsUp::ActsAsVoteable::InstanceMethods
         extend  ThumbsUp::ActsAsVoteable::SingletonMethods
