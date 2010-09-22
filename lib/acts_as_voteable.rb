@@ -6,11 +6,32 @@ module ThumbsUp
     end
 
     module ClassMethods
-      def acts_as_voteable
+      def acts_as_voteable options={}
         has_many :votes, :as => :voteable, :dependent => :destroy
 
         include ThumbsUp::ActsAsVoteable::InstanceMethods
         extend  ThumbsUp::ActsAsVoteable::SingletonMethods
+        if (options[:vote_counter])
+          Vote.send(:include, ThumbsUp::ActsAsVoteable::VoteCounterClassMethods) unless Vote.respond_to?(:vote_counters)
+          Vote.vote_counters = [self]
+          vote_counter_column = (options[:vote_counter] == true) ? :vote_count : options[:vote_counter]
+          define_method(:vote_counter_column) {vote_counter_column}
+          define_method(:reload_vote_counter) {reload(:select => vote_counter_column.to_s)}
+          attr_readonly vote_counter_column
+        end
+      end
+    end
+    
+    module VoteCounterClassMethods
+      def self.included(base)
+        base.class_inheritable_array(:vote_counters)
+        base.after_create { |record| record.update_vote_counters(1) }
+        base.before_destroy { |record| record.update_vote_counters(-1) }
+      end
+      
+      def update_vote_counters direction
+        klass, vtbl = self.voteable.class, self.voteable
+        klass.update_counters(vtbl.id, vtbl.vote_counter_column.to_sym => (self.vote * direction) ) if self.vote_counters.any?{|c| c == klass}
       end
     end
 
@@ -50,11 +71,11 @@ module ThumbsUp
     module InstanceMethods
 
       def votes_for
-        Vote.where(:voteable_id => id, :voteable_type => self.class.name, :vote => true).count
+        self.votes.count(:conditions => {:vote => 1})
       end
 
       def votes_against
-        Vote.where(:voteable_id => id, :voteable_type => self.class.name, :vote => false).count
+        self.votes.count(:conditions => {:vote => -1})
       end
 
       # You'll probably want to use this method to display how 'good' a particular voteable
@@ -65,6 +86,10 @@ module ThumbsUp
 
       def votes_count
         self.votes.size
+      end
+      
+      def votes_total
+        self.votes.sum(:vote)
       end
 
       def voters_who_voted

@@ -42,6 +42,26 @@ Usage
       acts_as_voteable
     end
 
+	class Post < ActiveRecord::Base
+	  acts_as_voteable :vote_counter => true # Stores the sum of the votes in the `vote_total`
+	                                         # column of the `posts` table.
+	end
+	
+### Vote Counter
+If you want to store a vote counter on the voteable table you will need to create a migration like so:
+
+	class AddVoteCountToPost < ActiveRecord::Migration
+	  def self.up
+	    add_column :posts, :vote_count, :integer
+
+	  end
+
+	  def self.down
+	    drop_column :posts, :vote_count
+	  end
+	end
+
+
 ### Turn your Users (or any other model) into voters.
 
     class User < ActiveRecord::Base

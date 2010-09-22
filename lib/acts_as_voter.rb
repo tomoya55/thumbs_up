@@ -30,13 +30,8 @@ module ThumbsUp #:nodoc:
       #       user.vote_count()      # All votes
 
       def vote_count(for_or_against = :all)
-        v = Vote.where(:voter_id => id).where(:voter_type => self.class.name)
-        v = case for_or_against
-          when :all   then v
-          when :up    then v.where(:vote => true)
-          when :down  then v.where(:vote => false)
-        end
-        v.count
+        return self.votes.size if for_or_against == "all"
+        self.votes.count(:conditions => {:vote => (for_or_against ? 1 : -1)}) 
       end
 
       def voted_for?(voteable)
@@ -48,12 +43,7 @@ module ThumbsUp #:nodoc:
       end
 
       def voted_on?(voteable)
-        0 < Vote.where(
-              :voter_id => self.id,
-              :voter_type => self.class.name,
-              :voteable_id => voteable.id,
-              :voteable_type => voteable.class.name
-            ).count
+        voteable.voted_by?(self)
       end
 
       def vote_for(voteable)
@@ -77,8 +67,10 @@ module ThumbsUp #:nodoc:
         if options[:exclusive]
           self.clear_votes(voteable)
         end
-        direction = (options[:direction].to_sym == :up ? true : false)
-        Vote.create!(:vote => direction, :voteable => voteable, :voter => self)
+        direction = (options[:direction].to_sym == :up ? 1 : -1)
+        Vote.create!(:vote => direction, :voteable => voteable, :voter => self).tap do |v|
+          voteable.reload_vote_counter if !v.new_record? and voteable.respond_to?(:reload_vote_counter)
+        end
       end
 
       def clear_votes(voteable)
@@ -95,7 +87,7 @@ module ThumbsUp #:nodoc:
         0 < Vote.where(
               :voter_id => self.id,
               :voter_type => self.class.name,
-              :vote => direction == :up ? true : false,
+              :vote => direction == :up ? 1: -1,
               :voteable_id => voteable.id,
               :voteable_type => voteable.class.name
             ).count
