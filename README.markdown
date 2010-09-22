@@ -15,6 +15,8 @@ This plugin introduces three mixins to your recipe book:
 
 This plugin started as an adaptation / update of vote\_fu for use with Rails 3. It adds some speed, removes some cruft, and is adapted for use with ActiveRecord / Arel in Rails 3. It maintains the awesomeness of the original vote\_fu.
 
+Some of the integer vote type changes are borrowed from http://github.com/kandadaboggu/vote_fu and on this fork most areas outside the changes are untested.
+
 Installation
 ============
 
