@@ -24,6 +24,46 @@ module ThumbsUp #:nodoc:
 
     # This module contains instance methods
     module InstanceMethods
+      VALUES = {
+        :gold => 3, :silver => 2, :bronze => 1
+      }
+      
+      
+      # plusword
+      def vote_gold(voteable)
+        self.vote(voteable, { :value => VALUES[:gold], :exclusive => true })
+      end
+      
+      def vote_silver(voteable)
+        self.vote(voteable, { :value => VALUES[:silver], :exclusive => true })
+      end
+      
+      def vote_bronze(voteable)
+        self.vote(voteable, { :value => VALUES[:bronze], :exclusive => true })
+      end
+      
+      def vote_gold?(voteable)
+        vote_with?(voteable, VALUES[:gold])
+      end
+      
+      def vote_silver?(voteable)
+        vote_with?(voteable, VALUES[:silver])
+      end
+      
+      def vote_bronze?(voteable)
+        vote_with?(voteable, VALUES[:bronze])
+      end
+      
+      def vote_with?(voteable, value)
+        0 < Vote.where(:voter_id => self.id,
+              :voter_type => self.class.name,
+              :vote => value,
+              :voteable_id => voteable.id,
+              :voteable_type => voteable.class.name
+            ).count
+      end
+      
+      
 
       # Usage user.vote_count(:up)  # All +1 votes
       #       user.vote_count(:down) # All -1 votes
@@ -35,7 +75,7 @@ module ThumbsUp #:nodoc:
       end
 
       def voted_for?(voteable)
-        voted_which_way?(voteable, :up)
+        voted_with?(voteable, :up)
       end
 
       def voted_against?(voteable)
@@ -47,28 +87,28 @@ module ThumbsUp #:nodoc:
       end
 
       def vote_for(voteable)
-        self.vote(voteable, { :direction => :up, :exclusive => false })
+        self.vote(voteable, { :value => :up, :exclusive => false })
       end
 
       def vote_against(voteable)
-        self.vote(voteable, { :direction => :down, :exclusive => false })
+        self.vote(voteable, { :value => :down, :exclusive => false })
       end
 
       def vote_exclusively_for(voteable)
-        self.vote(voteable, { :direction => :up, :exclusive => true })
+        self.vote(voteable, { :value => :up, :exclusive => true })
       end
 
       def vote_exclusively_against(voteable)
-        self.vote(voteable, { :direction => :down, :exclusive => true })
+        self.vote(voteable, { :value => :down, :exclusive => true })
       end
 
       def vote(voteable, options = {})
-        raise ArgumentError "you must specify :up or :down in order to vote" unless options[:direction] && [:up, :down].include?(options[:direction].to_sym)
+        raise ArgumentError "you must specify value in order to vote" unless options[:value]
         if options[:exclusive]
           self.clear_votes(voteable)
         end
-        direction = (options[:direction].to_sym == :up ? 1 : -1)
-        Vote.create!(:vote => direction, :voteable => voteable, :voter => self).tap do |v|
+        value = [:up, :down].include?(options[:value]) ? (options[:value] == :up ? 1 : -1) : options[:value].to_i
+        Vote.create!(:vote => value, :voteable => voteable, :voter => self).tap do |v|
           voteable.reload_vote_counter if !v.new_record? and voteable.respond_to?(:reload_vote_counter)
         end
       end
@@ -84,13 +124,13 @@ module ThumbsUp #:nodoc:
 
       def voted_which_way?(voteable, direction)
         raise ArgumentError, "expected :up or :down" unless [:up, :down].include?(direction)
+        sql = direction == :up ? 'value >= 1' : 'value <= -1'
         0 < Vote.where(
               :voter_id => self.id,
               :voter_type => self.class.name,
-              :vote => direction == :up ? 1: -1,
               :voteable_id => voteable.id,
               :voteable_type => voteable.class.name
-            ).count
+            ).where(sql).count
       end
 
     end
