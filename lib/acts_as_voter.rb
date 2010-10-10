@@ -75,7 +75,7 @@ module ThumbsUp #:nodoc:
       end
 
       def voted_for?(voteable)
-        voted_with?(voteable, :up)
+        voted_which_way?(voteable, :up)
       end
 
       def voted_against?(voteable)
@@ -124,7 +124,7 @@ module ThumbsUp #:nodoc:
 
       def voted_which_way?(voteable, direction)
         raise ArgumentError, "expected :up or :down" unless [:up, :down].include?(direction)
-        sql = direction == :up ? 'value >= 1' : 'value <= -1'
+        sql = direction == :up ? 'vote >= 1' : 'vote <= -1'
         0 < Vote.where(
               :voter_id => self.id,
               :voter_type => self.class.name,
