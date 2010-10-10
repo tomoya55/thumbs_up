@@ -69,6 +69,18 @@ module ThumbsUp
     end
 
     module InstanceMethods
+      
+      def golds
+        self.votes.count(:conditions => {:vote => ActsAsVoter::InstanceMethods::VALUES[:gold]})
+      end
+      
+      def silvers
+        self.votes.count(:conditions => {:vote => ActsAsVoter::InstanceMethods::VALUES[:silver]})
+      end
+      
+      def bronzes
+        self.votes.count(:conditions => {:vote => ActsAsVoter::InstanceMethods::VALUES[:bronze]})
+      end
 
       def votes_for
         self.votes.count(:conditions => {:vote => 1})
